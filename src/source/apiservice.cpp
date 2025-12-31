@@ -465,6 +465,11 @@ QHash<QString, QString> APIService::parseM3U8QualityUrls(const QByteArray& m3u8D
 {
     qDebug() << "解析M3U8质量URL";
     
+    // 打印原始M3U8内容以便调试
+    qDebug() << "----------------- M3U8 Content Start -----------------";
+    qDebug().noquote() << QString::fromUtf8(m3u8Data);
+    qDebug() << "----------------- M3U8 Content End -------------------";
+
     QStringList m3u8Lines = QString::fromUtf8(m3u8Data).split("\n");
     QHash<QString, QualityInfo> qualityMap = {
         {"4", {460800, "480x270"}},
