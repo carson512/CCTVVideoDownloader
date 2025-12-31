@@ -24,8 +24,9 @@ jobs:
         
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
-      # with:
-      #   vcpkgGitCommitId: '86025170d117565191b48b52f36f9661384440c4' # 移除特定版本，使用最新版
+      with:
+        vcpkgGitCommitId: 'fd5e5828469e011406859b56f2d5e54c0e64c126' # 使用一个较新的稳定版本 (2024.08)
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
         
     - name: Install Dependencies
       run: |
