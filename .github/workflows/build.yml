@@ -22,15 +22,18 @@ jobs:
         target: 'desktop'
         arch: 'win64_msvc2022_64'
         
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'fd5e5828469e011406859b56f2d5e54c0e64c126' # 使用一个较新的稳定版本 (2024.08)
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+    - name: Manual Setup vcpkg
+      shell: cmd
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        git checkout fd5e5828469e011406859b56f2d5e54c0e64c126
+        call bootstrap-vcpkg.bat
         
     - name: Install Dependencies
+      shell: cmd
       run: |
-        vcpkg install cpr curl openssl:x64-windows --triplet x64-windows
+        .\vcpkg\vcpkg.exe install cpr curl openssl:x64-windows --triplet x64-windows
         
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1
