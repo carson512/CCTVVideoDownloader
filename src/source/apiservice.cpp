@@ -515,13 +515,13 @@ QString APIService::selectQuality(const QString& requestedQuality, const QHash<Q
     qDebug() << "选择质量，请求质量:" << requestedQuality;
     
     if (requestedQuality == "0") {
-        // 自动选择最高质量
+        // 自动选择最高质量 (ID "1" 是最高质量，所以取最小值)
         QStringList qualities = availableQualities.keys();
         if (qualities.isEmpty()) {
             qWarning() << "自动选择质量失败: 无可用的质量选项";
             return QString();
         }
-        QString selected = *std::max_element(qualities.begin(), qualities.end());
+        QString selected = *std::min_element(qualities.begin(), qualities.end());
         qDebug() << "自动选择最高质量:" << selected;
         return selected;
     }
