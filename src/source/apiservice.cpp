@@ -414,16 +414,17 @@ QStringList APIService::getEncryptM3U8Urls(const QString& GUID, const QString& q
 
     qInfo() << "获取到M3U8 URL:" << hlsH5eUrl;
     
-    // 替换CDN
-    // QRegularExpression re("https://[^/]+/asp/enc2/");
-    // QRegularExpressionMatch match = re.match(hlsH5eUrl);
+    // 尝试替换CDN为抓包获取的域名，以解决默认CDN质量不对的问题
+    QRegularExpression re("https://[^/]+/asp/enc2/");
+    QRegularExpressionMatch match = re.match(hlsH5eUrl);
 
-    // if (match.hasMatch()) {
-    //    hlsH5eUrl.replace(match.captured(0), "https://dh5cntv.a.bdydns.com/asp/enc2/");
-    // }
-    // else {
-    //    qWarning() << "无法替换CDN，使用默认CDN";
-    // }
+    if (match.hasMatch()) {
+       hlsH5eUrl.replace(match.captured(0), "https://dhls.cntv.cdn20.com/asp/enc2/");
+       qInfo() << "已替换CDN域名为: dhls.cntv.cdn20.com";
+    }
+    else {
+       qWarning() << "无法替换CDN，使用默认CDN";
+    }
 
     qInfo() << "使用M3U8 URL:" << hlsH5eUrl;
 
