@@ -35,8 +35,8 @@ jobs:
       run: |
         .\vcpkg\vcpkg.exe install cpr curl openssl:x64-windows --triplet x64-windows
         
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1
+    - name: Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
       
     - name: Build
       shell: cmd
@@ -44,7 +44,8 @@ jobs:
         QT_PATH: ${{ env.Qt6_DIR }}
         VCPKG_PATH: ${{ github.workspace }}\vcpkg\installed\x64-windows
       run: |
-        msbuild CCTVVideoDownloader.vcxproj /p:Configuration=Release /p:Platform=x64
+        qmake CCTVVideoDownloader.pro "CONFIG+=release"
+        nmake
         
     - name: Deploy Qt Dependencies
       shell: cmd
@@ -52,20 +53,20 @@ jobs:
         QT_PATH: ${{ env.Qt6_DIR }}
       run: |
         set PATH=%QT_PATH%\bin;%PATH%
-        windeployqt x64\Release\CCTVVideoDownloader.exe --dir x64\Release\
+        windeployqt release\CCTVVideoDownloader.exe --dir release\
         
     - name: Copy Extra DLLs
       shell: cmd
       run: |
-        copy vcpkg\installed\x64-windows\bin\libcurl.dll x64\Release\
-        copy vcpkg\installed\x64-windows\bin\cpr.dll x64\Release\
-        copy vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll x64\Release\
-        copy vcpkg\installed\x64-windows\bin\libssl-3-x64.dll x64\Release\
-        copy vcpkg\installed\x64-windows\bin\zlib1.dll x64\Release\
-        xcopy /Y /E src\decrypt x64\Release\decrypt\
+        copy vcpkg\installed\x64-windows\bin\libcurl.dll release\
+        copy vcpkg\installed\x64-windows\bin\cpr.dll release\
+        copy vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll release\
+        copy vcpkg\installed\x64-windows\bin\libssl-3-x64.dll release\
+        copy vcpkg\installed\x64-windows\bin\zlib1.dll release\
+        xcopy /Y /E src\decrypt release\decrypt\
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: CCTVVideoDownloader-Release
-        path: x64/Release/
+        path: release/
