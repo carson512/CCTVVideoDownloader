@@ -56,6 +56,14 @@ void DownloadTask::run()
     QNetworkAccessManager manager;
     auto url = QUrl(m_url);
     QNetworkRequest request(url);
+
+    // 设置伪装头 (模拟 Chrome)
+    request.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
+    request.setRawHeader("Referer", "https://tv.cctv.com/");
+    request.setRawHeader("Origin", "https://tv.cctv.com");
+    request.setRawHeader("Accept", "*/*");
+    request.setRawHeader("Accept-Language", "zh-CN,zh;q=0.9");
+
     QNetworkReply* reply = manager.get(request);
 
     QObject::connect(reply, &QNetworkReply::downloadProgress, [&](qint64 rec, qint64 total) {

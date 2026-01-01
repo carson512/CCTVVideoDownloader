@@ -414,22 +414,25 @@ QStringList APIService::getEncryptM3U8Urls(const QString& GUID, const QString& q
 
     qInfo() << "获取到M3U8 URL:" << hlsH5eUrl;
     
-    // 尝试替换CDN为抓包获取的域名，以解决默认CDN质量不对的问题
-    QRegularExpression re("https://[^/]+/asp/enc2/");
-    QRegularExpressionMatch match = re.match(hlsH5eUrl);
+    // 强制替换为 Web 端 h5e 格式，以获取高清源
+    // 1. 替换路径 enc2 -> h5e
+    hlsH5eUrl.replace("/asp/enc2/", "/asp/h5e/");
+    // 2. 替换域名为抓包获取的 Web 端域名
+    QRegularExpression re("https://[^/]+/");
+    hlsH5eUrl.replace(re, "https://dh5wswx02.v.cntv.cn/");
 
-    if (match.hasMatch()) {
-       hlsH5eUrl.replace(match.captured(0), "https://dhls.cntv.cdn20.com/asp/enc2/");
-       qInfo() << "已替换CDN域名为: dhls.cntv.cdn20.com";
-    }
-    else {
-       qWarning() << "无法替换CDN，使用默认CDN";
-    }
+    qInfo() << "魔改后的 Web 端 URL:" << hlsH5eUrl;
 
-    qInfo() << "使用M3U8 URL:" << hlsH5eUrl;
+    // 构造伪装 Headers
+    QHash<QString, QString> headers;
+    headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+    headers["Referer"] = "https://tv.cctv.com/";
+    headers["Origin"] = "https://tv.cctv.com";
+    headers["Accept"] = "*/*";
+    headers["Accept-Language"] = "zh-CN,zh;q=0.9";
 
-    // 获取主M3U8文件
-    QByteArray m3u8Data = sendNetworkRequest(QUrl(hlsH5eUrl));
+    // 获取主M3U8文件 (带 Headers)
+    QByteArray m3u8Data = sendNetworkRequest(QUrl(hlsH5eUrl), headers);
     if (m3u8Data.isEmpty()) {
         qWarning() << "获取M3U8文件失败: 响应数据为空";
         return QStringList();
@@ -550,7 +553,14 @@ QStringList APIService::getTsFileList(const QString& qualityPath, const QString&
     QString fullM3u8Url = "https://" + m3u8Host + qualityPath;
     qDebug() << "完整M3U8 URL:" << fullM3u8Url;
 
-    QByteArray videoM3u8Data = sendNetworkRequest(QUrl(fullM3u8Url));
+    // 构造伪装 Headers
+    QHash<QString, QString> headers;
+    headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+    headers["Referer"] = "https://tv.cctv.com/";
+    headers["Origin"] = "https://tv.cctv.com";
+    headers["Accept"] = "*/*";
+
+    QByteArray videoM3u8Data = sendNetworkRequest(QUrl(fullM3u8Url), headers);
     if (videoM3u8Data.isEmpty()) {
         qWarning() << "获取视频M3U8文件失败: 响应数据为空";
         return QStringList();
@@ -561,10 +571,18 @@ QStringList APIService::getTsFileList(const QString& qualityPath, const QString&
     QStringList videoLines = QString::fromUtf8(videoM3u8Data).split("\n");
     QStringList tsList;
     QString basePath = fullM3u8Url.left(fullM3u8Url.lastIndexOf("/") + 1);
+    QString domainUrl = "https://" + m3u8Host;
 
     for (const QString& line : videoLines) {
         if (line.endsWith(".ts")) {
-            QString tsUrl = basePath + line;
+            QString tsUrl;
+            if (line.startsWith("http")) {
+                tsUrl = line;
+            } else if (line.startsWith("/")) {
+                tsUrl = domainUrl + line;
+            } else {
+                tsUrl = basePath + line;
+            }
             tsList << tsUrl;
         }
     }
