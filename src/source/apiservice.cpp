@@ -405,31 +405,33 @@ QStringList APIService::getEncryptM3U8Urls(const QString& GUID, const QString& q
     }
 
     QJsonObject manifestObj = parseJsonObject(infoData, "manifest");
-    QString hlsH5eUrl = manifestObj["hls_enc2_url"].toString();
+    // 优先使用 hls_enc_url (老版加密路径)，经测试此路径配合 cdn20 域名可获取 720P
+    QString hlsH5eUrl = manifestObj["hls_enc_url"].toString();
 
     if (hlsH5eUrl.isEmpty()) {
-        qWarning() << "无法获取hls_enc2_url";
+        qInfo() << "未找到 hls_enc_url，尝试回退到 hls_enc2_url";
+        hlsH5eUrl = manifestObj["hls_enc2_url"].toString();
+    }
+
+    if (hlsH5eUrl.isEmpty()) {
+        qWarning() << "无法获取有效 M3U8 URL";
         return QStringList();
     }
 
-    qInfo() << "获取到M3U8 URL:" << hlsH5eUrl;
+    qInfo() << "获取到原始 URL:" << hlsH5eUrl;
     
-    // 强制替换为 Web 端 h5e 格式，以获取高清源
-    // 1. 替换路径 enc2 -> h5e
-    hlsH5eUrl.replace("/asp/enc2/", "/asp/h5e/");
-    // 2. 替换域名为抓包获取的 Web 端域名
+    // 强制替换域名为 dhls.cntv.cdn20.com (该域名在 enc 路径下验证有效)
     QRegularExpression re("https://[^/]+/");
-    hlsH5eUrl.replace(re, "https://dh5wswx02.v.cntv.cn/");
+    hlsH5eUrl.replace(re, "https://dhls.cntv.cdn20.com/");
 
-    qInfo() << "魔改后的 Web 端 URL:" << hlsH5eUrl;
+    qInfo() << "替换 CDN 后的 URL:" << hlsH5eUrl;
 
-    // 构造伪装 Headers
+    // 构造 CBox 伪装 Headers
     QHash<QString, QString> headers;
-    headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
-    headers["Referer"] = "https://tv.cctv.com/";
-    headers["Origin"] = "https://tv.cctv.com";
-    headers["Accept"] = "*/*";
-    headers["Accept-Language"] = "zh-CN,zh;q=0.9";
+    headers["User-Agent"] = "PCCTV/6.0.4.0/Windows11_64Bit";
+    headers["Referer"] = "https://cboxwin.cctv.com";
+    headers["Origin"] = "https://cboxwin.cctv.com";
+    headers["Connection"] = "Keep-Alive";
 
     // 获取主M3U8文件 (带 Headers)
     QByteArray m3u8Data = sendNetworkRequest(QUrl(hlsH5eUrl), headers);
@@ -553,12 +555,12 @@ QStringList APIService::getTsFileList(const QString& qualityPath, const QString&
     QString fullM3u8Url = "https://" + m3u8Host + qualityPath;
     qDebug() << "完整M3U8 URL:" << fullM3u8Url;
 
-    // 构造伪装 Headers
+    // 构造 CBox 伪装 Headers
     QHash<QString, QString> headers;
-    headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
-    headers["Referer"] = "https://tv.cctv.com/";
-    headers["Origin"] = "https://tv.cctv.com";
-    headers["Accept"] = "*/*";
+    headers["User-Agent"] = "PCCTV/6.0.4.0/Windows11_64Bit";
+    headers["Referer"] = "https://cboxwin.cctv.com";
+    headers["Origin"] = "https://cboxwin.cctv.com";
+    headers["Connection"] = "Keep-Alive";
 
     QByteArray videoM3u8Data = sendNetworkRequest(QUrl(fullM3u8Url), headers);
     if (videoM3u8Data.isEmpty()) {
