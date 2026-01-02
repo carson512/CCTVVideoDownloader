@@ -55,6 +55,12 @@ QByteArray APIService::sendNetworkRequest(const QUrl& url, const QHash<QString, 
     }
 
     QNetworkReply* reply = manager.get(request);
+    
+    // 忽略SSL错误 (针对证书不匹配的高清CDN域名)
+    connect(reply, &QNetworkReply::sslErrors, [reply](const QList<QSslError>& errors) {
+        reply->ignoreSslErrors();
+    });
+
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
@@ -405,26 +411,21 @@ QStringList APIService::getEncryptM3U8Urls(const QString& GUID, const QString& q
     }
 
     QJsonObject manifestObj = parseJsonObject(infoData, "manifest");
-    // 优先使用 hls_enc_url (老版加密路径)，经测试此路径配合 cdn20 域名可获取 720P
-    QString hlsH5eUrl = manifestObj["hls_enc_url"].toString();
+    // 改回使用 hls_enc2_url，但替换为经过验证的高清域名 drm.cntv.vod.dnsv1.com
+    QString hlsH5eUrl = manifestObj["hls_enc2_url"].toString();
 
     if (hlsH5eUrl.isEmpty()) {
-        qInfo() << "未找到 hls_enc_url，尝试回退到 hls_enc2_url";
-        hlsH5eUrl = manifestObj["hls_enc2_url"].toString();
-    }
-
-    if (hlsH5eUrl.isEmpty()) {
-        qWarning() << "无法获取有效 M3U8 URL";
+        qWarning() << "无法获取 hls_enc2_url";
         return QStringList();
     }
 
     qInfo() << "获取到原始 URL:" << hlsH5eUrl;
     
-    // 强制替换域名为 dhls.cntv.cdn20.com (该域名在 enc 路径下验证有效)
+    // 强制替换域名为高清源域名
     QRegularExpression re("https://[^/]+/");
-    hlsH5eUrl.replace(re, "https://dhls.cntv.cdn20.com/");
+    hlsH5eUrl.replace(re, "https://drm.cntv.vod.dnsv1.com/");
 
-    qInfo() << "替换 CDN 后的 URL:" << hlsH5eUrl;
+    qInfo() << "使用高清 CDN 替换后的 URL:" << hlsH5eUrl;
 
     // 构造 CBox 伪装 Headers
     QHash<QString, QString> headers;

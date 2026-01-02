@@ -66,6 +66,11 @@ void DownloadTask::run()
 
     QNetworkReply* reply = manager.get(request);
 
+    // 忽略SSL错误
+    connect(reply, &QNetworkReply::sslErrors, [reply](const QList<QSslError>& errors) {
+        reply->ignoreSslErrors();
+    });
+
     QObject::connect(reply, &QNetworkReply::downloadProgress, [&](qint64 rec, qint64 total) {
         if (total > 0) {
             double progress = (static_cast<double>(rec) / total) * 100.0;
